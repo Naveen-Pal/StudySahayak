@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - StudySahayak{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-home"></i> Dashboard
+            <span class="text-muted">Welcome, {{ session.username }}!</span>
+        </h1>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                        <h2><i class="fas fa-upload"></i> Upload Content</h2>
+                        <a href="{{ url_for('my_content') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-folder-open"></i> View My Content
+                        </a>
+                    </div>
+                    <p class="text-muted">Upload content and get AI-generated structured materials</p>
+                </div>
+                
+                <!-- Content Type Information -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-primary h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-video fa-2x text-primary mb-2"></i>
+                                <h6>Videos</h6>
+                                <small class="text-muted">Auto-transcribed then structured using AI</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-danger h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-file-pdf fa-2x text-danger mb-2"></i>
+                                <h6>PDFs</h6>
+                                <small class="text-muted">Text extracted then structured using AI</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-success h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-keyboard fa-2x text-success mb-2"></i>
+                                <h6>Text</h6>
+                                <small class="text-muted">Directly structured using AI</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <form method="POST" action="{{ url_for('frontend_upload') }}" enctype="multipart/form-data" id="uploadForm">
+                    <!-- File Upload Section -->
+                    <div class="mb-4">
+                        <label class="form-label">Upload File</label>
+                        <div class="upload-area border rounded p-4 text-center" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <p class="mb-2">Drag and drop your file here, or click to browse</p>
+                            <p class="text-muted small">
+                                <strong>Supported:</strong> 
+                                <span class="badge bg-primary me-1">MP4, AVI, MOV, MKV</span>
+                                <span class="badge bg-danger me-1">PDF</span>
+                                <span class="badge bg-success">TXT</span>
+                            </p>
+                            <input type="file" class="form-control d-none" id="fileInput" name="file" accept=".mp4,.avi,.mov,.mkv,.pdf,.txt">
+                            <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-folder-open"></i> Browse Files
+                            </button>
+                        </div>
+                        <div id="fileInfo" class="mt-2 d-none">
+                            <div class="alert alert-info">
+                                <i class="fas fa-file"></i> <span id="fileName"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mb-3">
+                        <span class="badge bg-secondary">OR</span>
+                    </div>
+                    
+                    <!-- Text Input Section -->
+                    <div class="mb-4">
+                        <label for="textContent" class="form-label">Enter Text Content</label>
+                        <textarea class="form-control" id="textContent" name="text_content" rows="6" 
+                                  placeholder="Paste your text content here..."></textarea>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="fas fa-magic"></i> Process Content
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{{ url_for('my_content') }}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> View My Content
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const textContent = document.getElementById('textContent');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('border-primary');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('border-primary');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('border-primary');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            showFileInfo(files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            showFileInfo(this.files[0]);
+        }
+    });
+    
+    function showFileInfo(file) {
+        fileName.textContent = file.name;
+        fileInfo.classList.remove('d-none');
+        textContent.value = ''; // Clear text content if file is selected
+    }
+    
+    // Clear file selection when text is entered
+    textContent.addEventListener('input', function() {
+        if (this.value.trim()) {
+            fileInput.value = '';
+            fileInfo.classList.add('d-none');
+        }
+    });
+    
+    // Form validation
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        const hasFile = fileInput.files.length > 0;
+        const hasText = textContent.value.trim();
+        
+        if (!hasFile && !hasText) {
+            e.preventDefault();
+            alert('Please either upload a file or enter text content.');
+            return false;
+        }
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        submitBtn.disabled = true;
+    });
+});
+</script>
+{% endblock %}

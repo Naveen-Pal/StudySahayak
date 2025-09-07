@@ -1,0 +1,744 @@
+{% extends "base.html" %}
+
+{% block title %}Graph - {{ content.title }} - StudySahayak{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">
+                <i class="fas fa-project-diagram text-info"></i> Interactive Content Graph
+            </h1>
+            <div>
+                <a href="{{ url_for('content_options', content_id=content._id) }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Back to Options
+                </a>
+                <button class="btn btn-outline-primary me-2" onclick="resetGraph()">
+                    <i class="fas fa-redo"></i> Reset Graph
+                </button>
+                <button class="btn btn-outline-success" onclick="exportGraph()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content Type Badge -->
+<div class="row mb-3">
+    <div class="col-12">
+        <span class="badge bg-{{ 'success' if content.content_type == 'text' else 'primary' if content.content_type == 'pdf' else 'warning' }} fs-6 mb-3">
+            <i class="fas fa-{{ 'keyboard' if content.content_type == 'text' else 'file-pdf' if content.content_type == 'pdf' else 'video' }}"></i>
+            {{ content.content_type.upper() }} Content
+        </span>
+    </div>
+</div>
+
+<!-- Graph Controls -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-2">
+                        <label for="graphLayout" class="form-label">Layout:</label>
+                        <select id="graphLayout" class="form-select form-select-sm" onchange="changeLayout()">
+                            <option value="force">Force Directed</option>
+                            <option value="hierarchical">Hierarchical</option>
+                            <option value="circular">Circular</option>
+                            <option value="radial">Radial Tree</option>
+                            <option value="grid">Grid</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="nodeSize" class="form-label">Node Size:</label>
+                        <input type="range" id="nodeSize" class="form-range" min="10" max="50" value="25" onchange="updateNodeSize()">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="linkDistance" class="form-label">Link Distance:</label>
+                        <input type="range" id="linkDistance" class="form-range" min="50" max="300" value="150" onchange="updateLinkDistance()">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="difficultyFilter" class="form-label">Difficulty:</label>
+                        <select id="difficultyFilter" class="form-select form-select-sm" onchange="filterByDifficulty()">
+                            <option value="all">All Levels</option>
+                            <option value="beginner">Beginner</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="advanced">Advanced</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showLabels" checked onchange="toggleLabels()">
+                            <label class="form-check-label" for="showLabels">Show Labels</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showPath" onchange="toggleLearningPath()">
+                            <label class="form-check-label" for="showPath">Learning Path</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="d-flex flex-wrap align-items-center">
+                    <span class="me-3"><strong>Legend:</strong></span>
+                    <span class="badge me-2" style="background-color: #1e3a8a;">Main Topic</span>
+                    <span class="badge me-2" style="background-color: #3b82f6;">Concepts</span>
+                    <span class="badge me-2" style="background-color: #10b981;">Definitions</span>
+                    <span class="badge me-2" style="background-color: #f59e0b;">Principles</span>
+                    <span class="badge me-2" style="background-color: #ef4444;">Examples</span>
+                    <span class="badge me-2" style="background-color: #8b5cf6;">Applications</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graph Container -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ content.title }} - Topic Hierarchy</h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="zoomIn()">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="zoomOut()">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="centerGraph()">
+                        <i class="fas fa-crosshairs"></i> Center
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="graph-container" style="height: 600px; width: 100%; border: 1px solid #dee2e6;">
+                    <div id="loading-spinner" class="d-flex justify-content-center align-items-center h-100">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Generating interactive graph...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Node Details Panel -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card" id="node-details" style="display: none;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle"></i> Node Details
+                    <button type="button" class="btn-close btn-close-white float-end" onclick="hideNodeDetails()"></button>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="node-content">
+                    <!-- Node details will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-list"></i> Legend</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="legend-node main-topic me-2"></div>
+                            <span>Main Topics</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="legend-node sub-topic me-2"></div>
+                            <span>Sub Topics</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="legend-node concept me-2"></div>
+                            <span>Concepts</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="legend-node key-point me-2"></div>
+                            <span>Key Points</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- D3.js Library -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<style>
+.legend-node {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-node.main-topic {
+    background-color: #007bff;
+}
+
+.legend-node.sub-topic {
+    background-color: #28a745;
+}
+
+.legend-node.concept {
+    background-color: #ffc107;
+}
+
+.legend-node.key-point {
+    background-color: #dc3545;
+}
+
+/* Enhanced Graph Styles */
+.node {
+    stroke: #fff;
+    stroke-width: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.node:hover {
+    stroke-width: 3px;
+    filter: brightness(1.2);
+}
+
+.node.highlighted {
+    stroke: #ff6b35;
+    stroke-width: 4px;
+    filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.6));
+}
+
+.link {
+    stroke: #999;
+    stroke-opacity: 0.8;
+    stroke-width: 2px;
+    transition: all 0.3s ease;
+}
+
+.link.learning-path {
+    stroke: #ff6b35;
+    stroke-width: 4px;
+    stroke-dasharray: 5,5;
+    animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: -10;
+    }
+}
+
+.link.relationship-prerequisite {
+    stroke: #ef4444;
+    stroke-dasharray: 3,3;
+}
+
+.link.relationship-related {
+    stroke: #10b981;
+}
+
+.link.relationship-example {
+    stroke: #f59e0b;
+    stroke-dasharray: 2,2;
+}
+
+.node-label {
+    font-family: 'Arial', sans-serif;
+    font-size: 11px;
+    fill: #333;
+    text-anchor: middle;
+    pointer-events: none;
+    user-select: none;
+    font-weight: 500;
+}
+
+.level-header .node-label {
+    font-size: 13px;
+    font-weight: bold;
+    fill: #1e3a8a;
+}
+
+#graph-container {
+    overflow: hidden;
+    background: radial-gradient(circle at 25% 25%, #f0f9ff 0%, transparent 70%),
+                radial-gradient(circle at 75% 75%, #f0f9ff 0%, transparent 70%),
+                linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    border-radius: 8px;
+}
+</style>
+
+<script>
+let svg, simulation, graphData, currentLayout = 'force';
+let nodeSize = 25, linkDistance = 150, showLabels = true;
+let showLearningPath = false, currentDifficultyFilter = 'all';
+let learningPathHighlight = [];
+let isInitializing = false; // Prevent multiple initializations
+
+// Initialize the graph when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    if (!isInitializing) {
+        initializeGraph();
+    }
+});
+
+async function initializeGraph() {
+    if (isInitializing) {
+        console.log('Already initializing, skipping...');
+        return;
+    }
+    
+    isInitializing = true;
+    console.log('Starting graph initialization...');
+    
+    try {
+        // Show loading state
+        const loadingSpinner = document.getElementById('loading-spinner');
+        if (loadingSpinner) {
+            loadingSpinner.style.display = 'flex';
+            loadingSpinner.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Generating interactive graph...</p>
+                </div>
+            `;
+        }
+        
+        // Try to fetch data from API
+        const response = await fetch(`/api/graph-data/{{ content._id }}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        console.log('API Response status:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Received data:', data);
+            
+            if (data && data.nodes && data.nodes.length > 0) {
+                graphData = data;
+                createGraph(graphData);
+                
+                if (data.metadata) {
+                    showGraphMetadata(data.metadata);
+                }
+            } else {
+                console.log('No valid data, using fallback');
+                loadFallbackGraph();
+            }
+        } else {
+            console.log('API failed, using fallback');
+            loadFallbackGraph();
+        }
+        
+        // Hide loading spinner
+        if (loadingSpinner) {
+            loadingSpinner.style.display = 'none';
+        }
+        
+    } catch (error) {
+        console.error('Error in initializeGraph:', error);
+        loadFallbackGraph();
+        
+        const loadingSpinner = document.getElementById('loading-spinner');
+        if (loadingSpinner) {
+            loadingSpinner.style.display = 'none';
+        }
+    } finally {
+        isInitializing = false;
+    }
+}
+
+function loadFallbackGraph() {
+    console.log('Loading fallback graph...');
+    
+    const fallbackData = {
+        nodes: [
+            {
+                id: '0',
+                name: '{{ content.title or "Main Topic" }}',
+                type: 'main_topic',
+                level: 0,
+                size: 45,
+                content: 'Central topic of the content',
+                color: '#1e3a8a'
+            },
+            {
+                id: '1',
+                name: 'Core Concepts',
+                type: 'level_header',
+                level: 1,
+                size: 35,
+                content: 'Fundamental concepts',
+                color: '#3b82f6'
+            },
+            {
+                id: '2',
+                name: 'Key Ideas',
+                type: 'concept',
+                level: 2,
+                size: 28,
+                content: 'Important ideas and principles',
+                color: '#10b981'
+            },
+            {
+                id: '3',
+                name: 'Applications',
+                type: 'application',
+                level: 2,
+                size: 28,
+                content: 'Practical applications',
+                color: '#8b5cf6'
+            },
+            {
+                id: '4',
+                name: 'Examples',
+                type: 'example',
+                level: 2,
+                size: 25,
+                content: 'Real-world examples',
+                color: '#ef4444'
+            },
+            {
+                id: '5',
+                name: 'Definitions',
+                type: 'definition',
+                level: 1,
+                size: 30,
+                content: 'Key terminology',
+                color: '#f59e0b'
+            }
+        ],
+        links: [
+            { source: '0', target: '1', value: 3, type: 'hierarchy' },
+            { source: '0', target: '5', value: 3, type: 'hierarchy' },
+            { source: '1', target: '2', value: 2, type: 'contains' },
+            { source: '1', target: '3', value: 2, type: 'contains' },
+            { source: '1', target: '4', value: 2, type: 'contains' }
+        ],
+        metadata: {
+            total_levels: 2,
+            total_concepts: 6,
+            complexity: 'beginner'
+        }
+    };
+    
+    graphData = fallbackData;
+    createGraph(graphData);
+}
+
+function createGraph(data) {
+    try {
+        console.log('Creating graph with nodes:', data.nodes.length);
+        
+        // Clear any existing graph
+        d3.select("#graph-container").selectAll("*").remove();
+        
+        const container = document.getElementById('graph-container');
+        if (!container) {
+            console.error('Graph container not found');
+            return;
+        }
+        
+        const width = container.clientWidth || 800;
+        const height = container.clientHeight || 600;
+        
+        // Create SVG
+        svg = d3.select("#graph-container")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+        
+        // Add zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                svg.select("g").attr("transform", event.transform);
+            });
+        
+        svg.call(zoom);
+        const g = svg.append("g");
+        
+        // Create simulation
+        simulation = d3.forceSimulation(data.nodes)
+            .force("link", d3.forceLink(data.links).id(d => d.id).distance(linkDistance))
+            .force("charge", d3.forceManyBody().strength(-400))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collision", d3.forceCollide().radius(d => (d.size || nodeSize) + 8));
+        
+        // Create links
+        const links = g.selectAll(".link")
+            .data(data.links)
+            .enter().append("line")
+            .attr("class", "link")
+            .style("stroke", "#999")
+            .style("stroke-width", d => Math.sqrt(d.value || 1) + 1)
+            .style("opacity", 0.6);
+        
+        // Create nodes
+        const nodes = g.selectAll(".node")
+            .data(data.nodes)
+            .enter().append("circle")
+            .attr("class", "node")
+            .attr("r", d => d.size || nodeSize)
+            .style("fill", d => d.color || getNodeColor(d.type))
+            .style("stroke", "#fff")
+            .style("stroke-width", 2)
+            .on("click", showNodeDetails)
+            .on("mouseover", function(event, d) {
+                d3.select(this)
+                    .transition()
+                    .duration(200)
+                    .attr("r", (d.size || nodeSize) * 1.2);
+            })
+            .on("mouseout", function(event, d) {
+                d3.select(this)
+                    .transition()
+                    .duration(200)
+                    .attr("r", d.size || nodeSize);
+            })
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+        
+        // Create labels
+        const labels = g.selectAll(".node-label")
+            .data(data.nodes)
+            .enter().append("text")
+            .attr("class", "node-label")
+            .text(d => d.name.length > 20 ? d.name.substring(0, 20) + '...' : d.name)
+            .style("font-size", "11px")
+            .style("text-anchor", "middle")
+            .style("fill", "#333")
+            .style("pointer-events", "none");
+        
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            links
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+            
+            nodes
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+            
+            labels
+                .attr("x", d => d.x)
+                .attr("y", d => d.y + 4);
+        });
+        
+        console.log('Graph created successfully');
+        
+    } catch (error) {
+        console.error('Error creating graph:', error);
+    }
+}
+
+function getNodeColor(type) {
+    const colors = {
+        'main_topic': '#1e3a8a',
+        'level_header': '#3b82f6',
+        'concept': '#10b981',
+        'definition': '#f59e0b',
+        'example': '#ef4444',
+        'application': '#8b5cf6'
+    };
+    return colors[type] || '#6c757d';
+}
+
+function showNodeDetails(event, d) {
+    const detailsPanel = document.getElementById('node-details');
+    const contentDiv = document.getElementById('node-content');
+    
+    if (contentDiv) {
+        contentDiv.innerHTML = `
+            <h5><i class="fas fa-tag"></i> ${d.name}</h5>
+            <p><strong>Type:</strong> <span class="badge" style="background-color: ${d.color || getNodeColor(d.type)}">${d.type.replace('_', ' ').toUpperCase()}</span></p>
+            <p><strong>Content:</strong> ${d.content || 'No additional content available.'}</p>
+            <p><strong>Level:</strong> ${d.level || 0}</p>
+        `;
+    }
+    
+    if (detailsPanel) {
+        detailsPanel.style.display = 'block';
+        detailsPanel.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function showGraphMetadata(metadata) {
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-info alert-dismissible fade show';
+    alert.innerHTML = `
+        <strong>Graph Analysis:</strong> 
+        ${metadata.total_concepts} concepts across ${metadata.total_levels} levels 
+        (Complexity: ${metadata.complexity})
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.row .col-12');
+    if (container) {
+        container.appendChild(alert);
+    }
+}
+
+// Drag functions
+function dragstarted(event, d) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+}
+
+function dragged(event, d) {
+    d.fx = event.x;
+    d.fy = event.y;
+}
+
+function dragended(event, d) {
+    if (!event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+}
+
+// Control functions
+function changeLayout() {
+    currentLayout = document.getElementById('graphLayout').value;
+    if (graphData) {
+        createGraph(graphData);
+    }
+}
+
+function updateNodeSize() {
+    nodeSize = parseInt(document.getElementById('nodeSize').value);
+    if (svg) {
+        d3.selectAll('.node').attr('r', d => d.size || nodeSize);
+    }
+}
+
+function updateLinkDistance() {
+    linkDistance = parseInt(document.getElementById('linkDistance').value);
+    if (simulation) {
+        simulation.force("link").distance(linkDistance);
+        simulation.alpha(0.3).restart();
+    }
+}
+
+function toggleLabels() {
+    showLabels = document.getElementById('showLabels').checked;
+    if (svg) {
+        d3.selectAll('.node-label').style('display', showLabels ? 'block' : 'none');
+    }
+}
+
+function resetGraph() {
+    if (graphData) {
+        createGraph(graphData);
+    }
+}
+
+function hideNodeDetails() {
+    const detailsPanel = document.getElementById('node-details');
+    if (detailsPanel) {
+        detailsPanel.style.display = 'none';
+    }
+}
+
+// Export and utility functions
+function exportGraph() {
+    const svgElement = document.querySelector('#graph-container svg');
+    if (!svgElement) return;
+    
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svgElement);
+    const blob = new Blob([svgString], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.download = 'concept-graph.svg';
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+function zoomIn() {
+    if (svg) {
+        svg.transition().call(
+            d3.zoom().scaleBy, 1.5
+        );
+    }
+}
+
+function zoomOut() {
+    if (svg) {
+        svg.transition().call(
+            d3.zoom().scaleBy, 0.75
+        );
+    }
+}
+
+function centerGraph() {
+    if (svg) {
+        const container = document.getElementById('graph-container');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        
+        svg.transition().call(
+            d3.zoom().transform,
+            d3.zoomIdentity.translate(0, 0).scale(1)
+        );
+    }
+}
+
+// Placeholder functions for compatibility
+function filterByDifficulty() {
+    console.log('Difficulty filter not implemented in simplified version');
+}
+
+function toggleLearningPath() {
+    console.log('Learning path not implemented in simplified version');
+}
+</script>
+{% endblock %}

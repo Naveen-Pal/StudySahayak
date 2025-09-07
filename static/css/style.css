@@ -1,0 +1,264 @@
+/* StudySahayak Custom Styles */
+
+/* General Styling */
+body {
+    background-color: #f8f9fa;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+/* Card Enhancements */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: 600;
+}
+
+/* Quiz Specific Styles */
+.question-card {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.form-check {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.form-check:hover {
+    border-color: #007bff;
+    background-color: #f8f9ff;
+}
+
+.form-check-input:checked + .form-check-label {
+    font-weight: 600;
+}
+
+.form-check-input {
+    margin-top: 0.25em;
+    margin-right: 10px;
+}
+
+.form-check-label {
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 0;
+}
+
+/* Answer feedback styling */
+.answer-feedback {
+    border-radius: 8px;
+    animation: slideDown 0.3s ease-in-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Question navigation */
+.question-nav-btn {
+    min-width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.question-nav-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Progress bar styling */
+.progress {
+    height: 8px;
+    border-radius: 4px;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}
+
+/* Upload area styling */
+.upload-area {
+    border: 2px dashed #007bff;
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-area:hover, .upload-area.dragover {
+    border-color: #0056b3;
+    background-color: #f8f9ff;
+}
+
+.upload-area.uploading {
+    border-color: #28a745;
+    background-color: #f8fff8;
+}
+
+/* Content cards in My Content */
+.content-card {
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.content-card:hover {
+    border-left-color: #007bff;
+    transform: translateX(5px);
+}
+
+.content-card.selected {
+    border-left-color: #28a745;
+    background-color: #f8fff8;
+}
+
+/* Button enhancements */
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    border: none;
+}
+
+.btn-success {
+    background: linear-gradient(45deg, #28a745, #1e7e34);
+    border: none;
+}
+
+.btn-warning {
+    background: linear-gradient(45deg, #ffc107, #e0a800);
+    border: none;
+    color: #212529;
+}
+
+.btn-danger {
+    background: linear-gradient(45deg, #dc3545, #c82333);
+    border: none;
+}
+
+/* Modal enhancements */
+.modal-content {
+    border: none;
+    border-radius: 10px;
+}
+
+.modal-header {
+    border-radius: 10px 10px 0 0;
+}
+
+/* Spinner styling */
+.spinner-border {
+    animation: spin 1s linear infinite;
+}
+
+/* Text highlighting for correct/incorrect answers */
+.text-success {
+    color: #198754 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .question-nav-btn {
+        min-width: 35px;
+        height: 35px;
+        font-size: 0.8rem;
+    }
+    
+    .form-check {
+        padding: 8px;
+    }
+    
+    .upload-area {
+        padding: 20px;
+    }
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Content type badges */
+.content-type-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+}
+
+/* Summary and Notes styling */
+.summary-section, .notes-section {
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.key-concept {
+    background-color: #e3f2fd;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    margin: 0.25rem;
+    display: inline-block;
+    font-size: 0.9rem;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    .card {
+        background-color: #2d2d2d;
+        color: #ffffff;
+    }
+    
+    .form-check {
+        border-color: #444;
+        background-color: #2d2d2d;
+    }
+    
+    .form-check:hover {
+        border-color: #007bff;
+        background-color: #1a1a2e;
+    }
+}

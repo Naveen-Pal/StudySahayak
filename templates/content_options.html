@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Content Options - StudySahayak{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-cogs"></i> Content Options
+        </h1>
+        <p class="text-muted mb-4">Choose what you'd like to do with your content:</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Graph Option -->
+    <div class="col-lg-3 mb-4">
+        <div class="card h-100 shadow-sm option-card">
+            <div class="card-body d-flex flex-column text-center">
+                <div class="mb-4">
+                    <i class="fas fa-project-diagram fa-4x text-info"></i>
+                </div>
+                <h4 class="mb-3">Graph</h4>
+                <p class="text-muted mb-4 flex-grow-1">
+                    Explore your content as an interactive graph with hierarchical topics and connections.
+                </p>
+                <a href="{{ url_for('view_graph_content', content_id=content_id) }}" class="btn btn-info">
+                    <i class="fas fa-project-diagram"></i> View Graph
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Option -->
+    <div class="col-lg-3 mb-4">
+        <div class="card h-100 shadow-sm option-card">
+            <div class="card-body d-flex flex-column text-center">
+                <div class="mb-4">
+                    <i class="fas fa-file-alt fa-4x text-primary"></i>
+                </div>
+                <h4 class="mb-3">Summary</h4>
+                <p class="text-muted mb-4 flex-grow-1">
+                    Get a concise summary of your content highlighting the key points and main ideas.
+                </p>
+                <a href="{{ url_for('frontend_summary', content_id=content_id) }}" class="btn btn-primary">
+                    <i class="fas fa-file-alt"></i> Generate Summary
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notes Option -->
+    <div class="col-lg-3 mb-4">
+        <div class="card h-100 shadow-sm option-card">
+            <div class="card-body d-flex flex-column text-center">
+                <div class="mb-4">
+                    <i class="fas fa-sticky-note fa-4x text-success"></i>
+                </div>
+                <h4 class="mb-3">Notes</h4>
+                <p class="text-muted mb-4 flex-grow-1">
+                    Generate structured notes with important concepts, definitions, and key takeaways.
+                </p>
+                <a href="{{ url_for('frontend_notes', content_id=content_id) }}" class="btn btn-success">
+                    <i class="fas fa-sticky-note"></i> Generate Notes
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quiz Option -->
+    <div class="col-lg-3 mb-4">
+        <div class="card h-100 shadow-sm option-card">
+            <div class="card-body d-flex flex-column text-center">
+                <div class="mb-4">
+                    <i class="fas fa-question-circle fa-4x text-warning"></i>
+                </div>
+                <h4 class="mb-3">Quiz</h4>
+                <p class="text-muted mb-4 flex-grow-1">
+                    Test your understanding with automatically generated questions and answers.
+                </p>
+                
+                <div class="mb-3">
+                    <label for="numQuestions" class="form-label">Number of Questions:</label>
+                    <select class="form-select" id="numQuestions">
+                        <option value="5">5 Questions</option>
+                        <option value="10">10 Questions</option>
+                        <option value="15">15 Questions</option>
+                        <option value="20">20 Questions</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-warning" onclick="generateQuiz()">
+                    <i class="fas fa-question-circle"></i> Generate Quiz
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12 text-center">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        <a href="{{ url_for('my_content') }}" class="btn btn-outline-primary">
+            <i class="fas fa-list"></i> View All Content
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function generateQuiz() {
+    const numQuestions = document.getElementById('numQuestions').value;
+    const contentId = '{{ content_id }}';
+    window.location.href = `/quiz/${contentId}?num_questions=${numQuestions}`;
+}
+
+// Add hover effects to option cards
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.option-card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.transition = 'transform 0.3s ease';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+{% endblock %}

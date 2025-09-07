@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Summary - StudySahayak{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="fas fa-file-alt text-primary"></i> Summary
+            </h1>
+            <div>
+                <a href="{{ url_for('download_summary_pdf', content_id=content._id) }}" class="btn btn-outline-danger me-2">
+                    <i class="fas fa-file-pdf"></i> Download PDF
+                </a>
+                <button onclick="printContent()" class="btn btn-outline-info me-2">
+                    <i class="fas fa-print"></i> Print
+                </button>
+                <a href="{{ url_for('content_options', content_id=content._id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Options
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt"></i> Content Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if summary and not summary.error %}
+                <div class="summary-content">
+                    {% if summary.main_topic %}
+                    <h4 class="text-primary mb-3">{{ summary.main_topic }}</h4>
+                    {% endif %}
+                    
+                    {% if summary.key_points %}
+                    <h5 class="mt-4 mb-3">Key Points:</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for point in summary.key_points %}
+                        <li class="list-group-item border-0 px-0">
+                            <i class="fas fa-chevron-right text-primary me-2"></i>{{ point }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    
+                    {% if summary.concepts %}
+                    <h5 class="mt-4 mb-3">Important Concepts:</h5>
+                    <div class="row">
+                        {% for concept, definition in summary.concepts.items() %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary">{{ concept }}</h6>
+                                    <p class="card-text small">{{ definition }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    {% if summary.conclusion %}
+                    <h5 class="mt-4 mb-3">Conclusion:</h5>
+                    <div class="alert alert-info">
+                        {{ summary.conclusion | nl2br }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if summary.summary_text %}
+                    <div class="mt-3">
+                        {{ summary.summary_text | nl2br }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif summary and summary.error %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error generating summary: {{ summary.error }}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Generating summary...</p>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted">
+                        <i class="fas fa-clock"></i> Generated automatically
+                    </small>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard()">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="downloadSummary()">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle"></i> Content Info
+                </h6>
+            </div>
+            <div class="card-body">
+                <p><strong>Type:</strong> {{ content.type | title }}</p>
+                <p><strong>Created:</strong> {{ content.created_at.strftime('%Y-%m-%d %H:%M') if content.created_at else 'Unknown' }}</p>
+                {% if content.filename %}
+                <p><strong>File:</strong> {{ content.filename }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-tools"></i> Other Options
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('frontend_notes', content_id=content._id) }}" class="btn btn-success btn-sm">
+                        <i class="fas fa-sticky-note"></i> Generate Notes
+                    </a>
+                    <a href="{{ url_for('frontend_quiz', content_id=content._id) }}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-question-circle"></i> Generate Quiz
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyToClipboard() {
+    const summaryText = document.querySelector('.summary-content').innerText;
+    navigator.clipboard.writeText(summaryText).then(function() {
+        // Show success message
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.classList.replace('btn-outline-primary', 'btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.replace('btn-success', 'btn-outline-primary');
+        }, 2000);
+    });
+}
+
+function downloadSummary() {
+    const summaryText = document.querySelector('.summary-content').innerText;
+    const blob = new Blob([summaryText], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'summary.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+function printContent() {
+    window.print();
+}
+</script>
+{% endblock %}

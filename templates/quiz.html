@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Quiz - StudySahayak{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="fas fa-question-circle text-warning"></i> Quiz
+            </h1>
+            <div>
+                <a href="{{ url_for('content_options', content_id=content._id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Options
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if quiz and quiz.questions %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle"></i> Question <span id="currentQuestion">1</span> of {{ quiz.questions | length }}
+                    </h5>
+                    <div>
+                        <span class="badge bg-dark">Score: <span id="score">0</span>/{{ quiz.questions | length }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="quiz-container">
+                    {% for question in quiz.questions %}
+                    <div class="question-card" data-question="{{ loop.index0 }}" style="display: {% if loop.first %}block{% else %}none{% endif %}">
+                        <h5 class="mb-3">{{ question.question }}</h5>
+                        <div class="options">
+                            {% set outer_loop = loop %}
+                            {% for option_key, option_value in question.options.items() %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input option-input" type="radio" 
+                                       name="question_{{ outer_loop.index0 }}" 
+                                       id="q{{ outer_loop.index0 }}_opt_{{ option_key }}" 
+                                       value="{{ option_key }}"
+                                       onchange="handleOptionChange({{ outer_loop.index0 }})">
+                                <label class="form-check-label" for="q{{ outer_loop.index0 }}_opt_{{ option_key }}">
+                                    <strong>{{ option_key }}.</strong> {{ option_value }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="answer-feedback mt-3" style="display: none;">
+                            <div class="alert alert-info">
+                                <strong>Correct Answer:</strong> {{ question.correct_answer }}
+                                {% if question.explanation %}
+                                <br><strong>Explanation:</strong> {{ question.explanation }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-secondary" id="prevBtn" onclick="changeQuestion(-1)" disabled>
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" id="checkBtn" onclick="checkAnswer()">
+                        Check Answer
+                    </button>
+                    <button class="btn btn-primary" id="nextBtn" onclick="changeQuestion(1)" style="display: none;">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="btn btn-success" id="finishBtn" onclick="finishQuiz()" style="display: none;">
+                        Finish Quiz
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-list"></i> Question Navigation
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="question-nav">
+                    {% for question in quiz.questions %}
+                    <button class="btn btn-outline-secondary btn-sm me-1 mb-1 question-nav-btn" 
+                            data-question="{{ loop.index0 }}" onclick="goToQuestion({{ loop.index0 }})">
+                        {{ loop.index }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar"></i> Progress
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-2">
+                    <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <p class="small text-muted mb-0">
+                    <span id="answeredCount">0</span> of {{ quiz.questions | length }} questions answered
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const quizData = {{ quiz.questions | tojson }};
+let currentQuestionIndex = 0;
+let score = 0;
+let answeredQuestions = new Set();
+let userAnswers = {};
+
+function handleOptionChange(questionIndex) {
+    const selectedOption = document.querySelector(`input[name="question_${questionIndex}"]:checked`);
+    if (selectedOption) {
+        userAnswers[questionIndex] = selectedOption.value;
+        updateButtonStates();
+    }
+}
+
+function changeQuestion(direction) {
+    const newIndex = currentQuestionIndex + direction;
+    if (newIndex >= 0 && newIndex < quizData.length) {
+        goToQuestion(newIndex);
+    }
+}
+
+function goToQuestion(index) {
+    // Hide current question
+    document.querySelector(`[data-question="${currentQuestionIndex}"]`).style.display = 'none';
+    
+    // Show new question
+    currentQuestionIndex = index;
+    document.querySelector(`[data-question="${currentQuestionIndex}"]`).style.display = 'block';
+    
+    // Update UI
+    document.getElementById('currentQuestion').textContent = currentQuestionIndex + 1;
+    document.getElementById('prevBtn').disabled = currentQuestionIndex === 0;
+    
+    // Update button states
+    updateButtonStates();
+    updateQuestionNavigation();
+}
+
+function checkAnswer() {
+    const selectedOption = document.querySelector(`input[name="question_${currentQuestionIndex}"]:checked`);
+    
+    if (!selectedOption) {
+        alert('Please select an answer!');
+        return;
+    }
+    
+    const currentQuestion = quizData[currentQuestionIndex];
+    const isCorrect = selectedOption.value === currentQuestion.correct_answer;
+    const questionCard = document.querySelector(`[data-question="${currentQuestionIndex}"]`);
+    const feedback = questionCard.querySelector('.answer-feedback');
+    
+    // Update feedback content
+    const correctAnswerText = currentQuestion.options[currentQuestion.correct_answer];
+    feedback.innerHTML = `
+        <strong>Correct Answer:</strong> ${currentQuestion.correct_answer}. ${correctAnswerText}
+        ${currentQuestion.explanation ? `<br><strong>Explanation:</strong> ${currentQuestion.explanation}` : ''}
+    `;
+    
+    // Show feedback with appropriate styling
+    feedback.style.display = 'block';
+    feedback.className = `answer-feedback mt-3 alert ${isCorrect ? 'alert-success' : 'alert-danger'}`;
+    
+    // Update score if first time answering
+    if (!answeredQuestions.has(currentQuestionIndex)) {
+        answeredQuestions.add(currentQuestionIndex);
+        if (isCorrect) score++;
+        updateScore();
+    }
+    
+    // Disable all options for this question
+    const options = questionCard.querySelectorAll('input[type="radio"]');
+    options.forEach(option => {
+        option.disabled = true;
+        // Highlight correct answer
+        const label = option.nextElementSibling;
+        if (option.value === currentQuestion.correct_answer) {
+            label.classList.add('text-success', 'fw-bold');
+        } else if (option.checked && option.value !== currentQuestion.correct_answer) {
+            label.classList.add('text-danger');
+        }
+    });
+    
+    updateButtonStates();
+    updateQuestionNavigation();
+}
+
+function updateButtonStates() {
+    const hasAnswer = document.querySelector(`input[name="question_${currentQuestionIndex}"]:checked`);
+    const isAnswered = answeredQuestions.has(currentQuestionIndex);
+    
+    document.getElementById('checkBtn').style.display = isAnswered ? 'none' : (hasAnswer ? 'inline-block' : 'inline-block');
+    document.getElementById('checkBtn').disabled = !hasAnswer && !isAnswered;
+    document.getElementById('nextBtn').style.display = isAnswered && currentQuestionIndex < quizData.length - 1 ? 'inline-block' : 'none';
+    document.getElementById('finishBtn').style.display = isAnswered && currentQuestionIndex === quizData.length - 1 ? 'inline-block' : 'none';
+}
+
+function updateScore() {
+    document.getElementById('score').textContent = score;
+    document.getElementById('answeredCount').textContent = answeredQuestions.size;
+    
+    const progress = (answeredQuestions.size / quizData.length) * 100;
+    document.getElementById('progressBar').style.width = progress + '%';
+}
+
+function updateQuestionNavigation() {
+    const navButtons = document.querySelectorAll('.question-nav-btn');
+    navButtons.forEach((btn, index) => {
+        btn.className = 'btn btn-sm me-1 mb-1 question-nav-btn ';
+        if (answeredQuestions.has(index)) {
+            btn.className += 'btn-success';
+        } else if (index === currentQuestionIndex) {
+            btn.className += 'btn-primary';
+        } else {
+            btn.className += 'btn-outline-secondary';
+        }
+    });
+}
+
+function finishQuiz() {
+    const percentage = Math.round((score / quizData.length) * 100);
+    let message = `Quiz completed!\n\nYour Score: ${score}/${quizData.length} (${percentage}%)\n\n`;
+    
+    if (percentage >= 80) {
+        message += 'Excellent work! 🎉';
+    } else if (percentage >= 60) {
+        message += 'Good job! Keep studying! 📚';
+    } else {
+        message += 'Keep practicing! You can do better! 💪';
+    }
+    
+    if (confirm(message + '\n\nWould you like to review your answers?')) {
+        // Scroll to top and review mode
+        window.scrollTo(0, 0);
+    }
+}
+
+// Initialize quiz
+document.addEventListener('DOMContentLoaded', function() {
+    updateQuestionNavigation();
+    updateButtonStates();
+});
+</script>
+
+{% else %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="text-center py-5">
+            <div class="spinner-border text-warning mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Generating quiz questions...</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

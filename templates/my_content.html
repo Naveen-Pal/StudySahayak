@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}My Content - StudySahayak{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2><i class="fas fa-folder-open"></i> My Content</h2>
+                    <div>
+                        <button id="bulkDeleteBtn" class="btn btn-outline-danger me-2" style="display: none;" onclick="confirmBulkDelete()">
+                            <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+                        </button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Upload New Content
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if content_list %}
+                        <div class="mb-3">
+                            <label class="form-check-label">
+                                <input type="checkbox" id="selectAll" class="form-check-input" onchange="toggleSelectAll()">
+                                <strong>Select All</strong>
+                            </label>
+                        </div>
+                        <div class="row">
+                            {% for content in content_list %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body position-relative">
+                                        <div class="position-absolute top-0 end-0 p-2">
+                                            <input type="checkbox" class="form-check-input content-checkbox" 
+                                                   value="{{ content._id }}" data-title="{{ content.title|e }}" 
+                                                   onchange="updateBulkDeleteButton()">
+                                        </div>
+                                        <h5 class="card-title pe-4">{{ content.title }}</h5>
+                                        <p class="card-text">
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar"></i> 
+                                                {% if content.created_at %}
+                                                    {{ content.created_at.strftime('%B %d, %Y') }}
+                                                {% else %}
+                                                    Unknown date
+                                                {% endif %}
+                                            </small>
+                                        </p>
+                                        <p class="card-text">
+                                            <span class="badge badge-{{ 'success' if content.content_type == 'text' else 'info' if content.content_type == 'pdf' else 'warning' }}">
+                                                <i class="fas fa-{{ 'file-text' if content.content_type == 'text' else 'file-pdf' if content.content_type == 'pdf' else 'video' }}"></i>
+                                                {{ content.content_type.upper() }}
+                                            </span>
+                                        </p>
+                                        {% if content.metadata %}
+                                        <p class="card-text">
+                                            <small class="text-muted">
+                                                {% if content.metadata.word_count %}
+                                                    Words: {{ content.metadata.word_count }}
+                                                {% endif %}
+                                                {% if content.metadata.character_count %}
+                                                    | Characters: {{ content.metadata.character_count }}
+                                                {% endif %}
+                                            </small>
+                                        </p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-footer">
+                                        <div class="btn-group w-100 mb-2" role="group">
+                                            <a href="{{ url_for('view_graph_content', content_id=content._id) }}" 
+                                               class="btn btn-outline-info btn-sm">
+                                                <i class="fas fa-project-diagram"></i> Graph
+                                            </a>
+                                            <a href="{{ url_for('frontend_summary', content_id=content._id) }}" 
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-list"></i> Summary
+                                            </a>
+                                            <a href="{{ url_for('frontend_notes', content_id=content._id) }}" 
+                                               class="btn btn-outline-success btn-sm">
+                                                <i class="fas fa-sticky-note"></i> Notes
+                                            </a>
+                                            <a href="{{ url_for('frontend_quiz', content_id=content._id) }}" 
+                                               class="btn btn-outline-warning btn-sm">
+                                                <i class="fas fa-question-circle"></i> Quiz
+                                            </a>
+                                        </div>
+                                        <div class="d-grid">
+                                            <button class="btn btn-outline-danger btn-sm" 
+                                                    onclick="confirmDelete('{{ content._id }}', '{{ content.title }}')">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-folder-open fa-5x text-muted mb-3"></i>
+                            <h4>No Content Yet</h4>
+                            <p class="text-muted">You haven't uploaded any content yet. Start by uploading a video, PDF, or text content.</p>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Upload Your First Content
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle text-warning"></i> Confirm Delete
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the content:</p>
+                <p class="fw-bold text-danger" id="contentTitle"></p>
+                <p class="text-muted">This action cannot be undone. All associated summaries, notes, and quizzes will also be permanently deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete Permanently
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkDeleteModalLabel">
+                    <i class="fas fa-exclamation-triangle text-warning"></i> Confirm Bulk Delete
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <span id="bulkDeleteCount" class="fw-bold text-danger"></span> selected content(s)?</p>
+                <div id="bulkDeleteList" class="mb-3"></div>
+                <p class="text-muted">This action cannot be undone. All associated summaries, notes, and quizzes will also be permanently deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="executeBulkDelete()">
+                    <i class="fas fa-trash"></i> Delete All Selected
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDelete(contentId, contentTitle) {
+    // Set the content title in the modal
+    document.getElementById('contentTitle').textContent = contentTitle;
+    
+    // Set the form action to the delete endpoint
+    document.getElementById('deleteForm').action = `/delete-content/${contentId}`;
+    
+    // Show the modal
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const contentCheckboxes = document.querySelectorAll('.content-checkbox');
+    
+    contentCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    
+    updateBulkDeleteButton();
+}
+
+function updateBulkDeleteButton() {
+    const checkedBoxes = document.querySelectorAll('.content-checkbox:checked');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    selectedCount.textContent = checkedBoxes.length;
+    
+    if (checkedBoxes.length > 0) {
+        bulkDeleteBtn.style.display = 'inline-block';
+    } else {
+        bulkDeleteBtn.style.display = 'none';
+    }
+    
+    // Update select all checkbox state
+    const totalBoxes = document.querySelectorAll('.content-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    
+    if (checkedBoxes.length === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+    } else if (checkedBoxes.length === totalBoxes.length) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+    } else {
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+function confirmBulkDelete() {
+    const checkedBoxes = document.querySelectorAll('.content-checkbox:checked');
+    const count = checkedBoxes.length;
+    
+    if (count === 0) {
+        alert('Please select at least one content to delete.');
+        return;
+    }
+    
+    // Update modal content
+    document.getElementById('bulkDeleteCount').textContent = count;
+    
+    // Create list of content to be deleted
+    const listContainer = document.getElementById('bulkDeleteList');
+    listContainer.innerHTML = '';
+    
+    const list = document.createElement('ul');
+    list.className = 'list-unstyled';
+    
+    checkedBoxes.forEach(checkbox => {
+        const contentTitle = checkbox.getAttribute('data-title');
+        
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `<i class="fas fa-file text-muted me-2"></i>${contentTitle}`;
+        list.appendChild(listItem);
+    });
+    
+    listContainer.appendChild(list);
+    
+    // Show the modal
+    const bulkDeleteModal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
+    bulkDeleteModal.show();
+}
+
+function executeBulkDelete() {
+    const checkedBoxes = document.querySelectorAll('.content-checkbox:checked');
+    const contentIds = Array.from(checkedBoxes).map(checkbox => checkbox.value);
+    
+    if (contentIds.length === 0) {
+        return;
+    }
+    
+    // Show loading state
+    const deleteBtn = document.querySelector('#bulkDeleteModal .btn-danger');
+    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+    deleteBtn.disabled = true;
+    
+    // Delete contents one by one (since we don't have a bulk delete API endpoint)
+    let deletedCount = 0;
+    let errors = [];
+    
+    const deletePromises = contentIds.map(contentId => {
+        return fetch(`/delete-content/${contentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        }).then(response => {
+            if (response.ok) {
+                deletedCount++;
+            } else {
+                const checkbox = document.querySelector(`input[value="${contentId}"]`);
+                const title = checkbox ? checkbox.getAttribute('data-title') : 'Unknown';
+                errors.push(title);
+            }
+        }).catch(error => {
+            const checkbox = document.querySelector(`input[value="${contentId}"]`);
+            const title = checkbox ? checkbox.getAttribute('data-title') : 'Unknown';
+            errors.push(title);
+        });
+    });
+    
+    Promise.all(deletePromises).then(() => {
+        // Close modal and reload page
+        const bulkDeleteModal = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
+        bulkDeleteModal.hide();
+        
+        if (errors.length > 0) {
+            alert(`Deleted ${deletedCount} items. Failed to delete: ${errors.join(', ')}`);
+        }
+        
+        // Reload the page to show updated content
+        window.location.reload();
+    });
+}
+
+// Add loading state when delete form is submitted
+document.getElementById('deleteForm').addEventListener('submit', function() {
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+    submitBtn.disabled = true;
+});
+
+// Add hover effects to content cards
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.transition = 'transform 0.3s ease';
+            this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - StudySahayak{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="text-center">
+            <h1 class="display-4 mb-4">
+                <i class="fas fa-graduation-cap text-primary"></i>
+                StudySahayak
+            </h1>
+            <p class="lead mb-5">Your AI-powered study companion. Upload videos, PDFs, or text to generate summaries, notes, and quizzes.</p>
+            
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                            <h5>Smart Summaries</h5>
+                            <p>Get concise summaries of your content</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-sticky-note fa-3x text-success mb-3"></i>
+                            <h5>AI Notes</h5>
+                            <p>Generate structured notes automatically</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-question-circle fa-3x text-warning mb-3"></i>
+                            <h5>Interactive Quizzes</h5>
+                            <p>Test your knowledge with custom quizzes</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-5">
+                <a href="{{ url_for('frontend_login') }}" class="btn btn-primary btn-lg me-3">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+                <a href="{{ url_for('frontend_signup') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-user-plus"></i> Sign Up
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

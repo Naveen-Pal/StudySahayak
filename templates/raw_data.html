@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Structured Content - {{ content.title }} - StudySahayak{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">
+                <i class="fas fa-sitemap text-info"></i> Structured Content
+            </h1>
+            <div>
+                <a href="{{ url_for('content_options', content_id=content._id) }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Back to Options
+                </a>
+                <button class="btn btn-outline-primary" onclick="printContent()">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content Type Badge -->
+<div class="row mb-3">
+    <div class="col-12">
+        <span class="badge bg-{{ 'success' if content.content_type == 'text' else 'primary' if content.content_type == 'pdf' else 'warning' }} fs-6 mb-3">
+            <i class="fas fa-{{ 'keyboard' if content.content_type == 'text' else 'file-pdf' if content.content_type == 'pdf' else 'video' }}"></i>
+            {{ content.content_type.upper() }} Content
+        </span>
+    </div>
+</div>
+
+<!-- Title Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0">{{ structured_data.get('title', content.title) }}</h2>
+            </div>
+            <div class="card-body">
+                {% if structured_data.get('executive_summary') %}
+                    <h5><i class="fas fa-eye text-primary"></i> Executive Summary</h5>
+                    <p class="text-muted">{{ structured_data.executive_summary }}</p>
+                {% endif %}
+                
+                {% if structured_data.get('metadata') and structured_data.metadata.get('estimated_read_time') %}
+                    <small class="text-muted">
+                        <i class="fas fa-clock"></i> Estimated read time: {{ structured_data.metadata.estimated_read_time }}
+                    </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Introduction Section -->
+{% if structured_data.get('introduction') %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="fas fa-info-circle"></i> Introduction</h4>
+            </div>
+            <div class="card-body">
+                <p>{{ structured_data.introduction }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Main Content Sections -->
+{% if structured_data.get('main_sections') %}
+<div class="row">
+    <div class="col-12">
+        <h3 class="mb-4"><i class="fas fa-list-ul text-success"></i> Main Content</h3>
+        
+        {% for section in structured_data.main_sections %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">{{ section.get('section_title', 'Section ' + loop.index|string) }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="content-text">
+                    {{ section.get('content', '') | replace('\n', '<br>') | safe }}
+                </div>
+                
+                {% if section.get('key_points') and section.key_points %}
+                <div class="mt-4">
+                    <h6><i class="fas fa-star text-warning"></i> Key Points:</h6>
+                    <ul class="list-group list-group-flush">
+                        {% for point in section.key_points %}
+                        <li class="list-group-item border-0 px-0">
+                            <i class="fas fa-check text-success me-2"></i>{{ point }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Key Takeaways -->
+{% if structured_data.get('key_takeaways') %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0"><i class="fas fa-lightbulb"></i> Key Takeaways</h4>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for takeaway in structured_data.key_takeaways %}
+                    <li class="list-group-item border-0 px-0">
+                        <i class="fas fa-arrow-right text-warning me-2"></i>{{ takeaway }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Concepts Glossary -->
+{% if structured_data.get('concepts_glossary') and structured_data.concepts_glossary %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="mb-0"><i class="fas fa-book"></i> Concepts Glossary</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for concept, definition in structured_data.concepts_glossary.items() %}
+                    <div class="col-md-6 mb-3">
+                        <div class="border-start border-primary border-3 ps-3">
+                            <h6 class="text-primary mb-1">{{ concept }}</h6>
+                            <p class="mb-0 text-muted">{{ definition }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Conclusion -->
+{% if structured_data.get('conclusion') %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4 border-success">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0"><i class="fas fa-flag-checkered"></i> Conclusion</h4>
+            </div>
+            <div class="card-body">
+                <p>{{ structured_data.conclusion }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Content Metadata -->
+{% if content.get('metadata') %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-info"></i> Content Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if content.metadata.get('word_count') %}
+                    <div class="col-md-3 mb-2">
+                        <small class="text-muted">Word Count:</small><br>
+                        <strong>{{ content.metadata.word_count }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if content.metadata.get('character_count') %}
+                    <div class="col-md-3 mb-2">
+                        <small class="text-muted">Characters:</small><br>
+                        <strong>{{ content.metadata.character_count }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if content.metadata.get('page_count') %}
+                    <div class="col-md-3 mb-2">
+                        <small class="text-muted">Pages:</small><br>
+                        <strong>{{ content.metadata.page_count }}</strong>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-3 mb-2">
+                        <small class="text-muted">Created:</small><br>
+                        <strong>{{ content.get('created_at', 'Unknown') }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+<div class="row">
+    <div class="col-12 text-center">
+        <a href="{{ url_for('frontend_summary', content_id=content._id) }}" class="btn btn-primary me-2">
+            <i class="fas fa-file-alt"></i> Generate Summary
+        </a>
+        <a href="{{ url_for('frontend_notes', content_id=content._id) }}" class="btn btn-success me-2">
+            <i class="fas fa-sticky-note"></i> Generate Notes
+        </a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-home"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function printContent() {
+    window.print();
+}
+
+// Add smooth scrolling for better navigation
+document.addEventListener('DOMContentLoaded', function() {
+    // Add print styles
+    const style = document.createElement('style');
+    style.textContent = `
+        @media print {
+            .btn, .card-header { 
+                display: none !important; 
+            }
+            .card { 
+                border: 1px solid #000 !important; 
+                margin-bottom: 1rem !important; 
+            }
+            .content-text {
+                line-height: 1.6;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+{% endblock %}
